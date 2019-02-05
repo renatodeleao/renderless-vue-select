@@ -1,0 +1,35 @@
+{
+  "name": "renderless-vue-select",
+  "version": "0.1.0",
+  "description": "All functionality required for an accessible <select>, zero opinions on markup styling",
+  "repository": "git@github.com:renatodeleao/renderless-vue-select.git",
+  "author": "Renato de Leão <renatodeleao@gmail.com>",
+  "license": "MIT",
+  "main": "src/index.js",
+  "module": "dist/renderless-vue-select.esm.js",
+  "browser": "dist/renderless-vue-select.umd.js",
+  "devDependencies": {
+    "@babel/core": "^7.2.2",
+    "@babel/plugin-proposal-object-rest-spread": "^7.3.1",
+    "@babel/plugin-transform-runtime": "^7.2.0",
+    "@babel/preset-env": "^7.2.3",
+    "autoprefixer": "^9.4.6",
+    "node-sass": "^4.11.0",
+    "rollup": "^1.0.0",
+    "rollup-plugin-babel": "^4.2.0",
+    "rollup-plugin-commonjs": "^9.2.0",
+    "rollup-plugin-node-resolve": "^4.0.0",
+    "rollup-plugin-terser": "^4.0.2",
+    "rollup-plugin-vue": "^4.6.1",
+    "vue-template-compiler": "^2.5.22"
+  },
+  "scripts": {
+    "build": "rm -rf dist/** && rollup -c",
+    "dev": "rollup -c -w",
+    "test": "node test/test.js",
+    "pretest": "npm run build"
+  },
+  "files": [
+    "dist"
+  ]
+}
