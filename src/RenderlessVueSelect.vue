@@ -4,25 +4,23 @@
  * [1] - ENHACEMENT: Add highlighted substrings (like the wesbos course)
  * [2] - Loading states and async work compatibility out-of-the-boz
  */
+const ATTRS_NAMESPACE = "data-renderless-vue-select"
 export default {
-  name: "renderless-vue-select",
+  name: "renderless-selectbox",
   props: {
-    value: {
-      type: [String, Object, null],
-      default: null
-    },
-    options: {
-      type: [Array],
-      required: true
-      // we use a serializer to validate
-    },
+    value: { type: [String, Object, null], default: null},
+    options: { type: [Array], required: true },
     /**
      * Default Filter by start matching, pass custom filters or fuzzy search engin like Fuse.js
      */
     filterFunction: {
       type: Function,
-      default: (query, options) => {
-        return options.filter(o => o.label.toLowerCase().startsWith(query.toLowerCase()))
+      default: (query, options, currentValue) => {
+        if(query === "" || query === currentValue.label ){
+          return options
+        } else {
+          return options.filter(o => o.label.toLowerCase().startsWith(query.toLowerCase()))
+        }
       }
     }
   },
@@ -35,6 +33,7 @@ export default {
       query: '',
       isOpen: false,
       highlightedIndex: 0,
+      selectedIndex: null,
     }
   },
   computed: {
@@ -64,7 +63,7 @@ export default {
       // we optimistically hope if the first option matches the rest as
       // it is expensive to be validating long arrays
       if(this._validateFormat(this.options[0])
-      ) {
+      ) {
         return this.options
       } else {
         throw new Error("Label and value are required keys in your option object")
@@ -72,16 +71,13 @@ export default {
     },
     filteredOptions(){
       // [1] [2]
-      return this.filterFunction(this.query, this.serializedOptions);
+      return this.filterFunction(this.query, this.serializedOptions, this.serializedValue);
     }
   },
   watch: {
     value(newVal){
-      if(!this.serializedValue || (this.serializedValue && this.serializedValue.label === null)){
-        this.query = ""
-      } else {
-        this.query = this.serializedValue.label;
-      }
+      this._updateQuery(newVal);
+      this._setSelectedIndex()
     },
     query(typedValue){
       if(typedValue !== "" && typedValue !== this.serializedValue.label){
@@ -93,10 +89,15 @@ export default {
   methods: {
     open(){
       this.isOpen = true;
+      this.$nextTick(() => {
+        this._scrollListToHighlighted();
+      })
     },
     close(){
       if(!this.isOpen) return;
-      this.highlightedIndex = 0;
+      // if nothing was select, but some keyboard playing occurred, reset to selected index
+      this._updateQuery(this.serializedValue);
+      this._setSelectedIndex();
       this.isOpen = false;
     },
     selectOption(option){
@@ -110,6 +111,7 @@ export default {
     reset(){
       this.query = "";
       this.highlightedIndex = 0;
+      this.inputRef.focus();
       this.$emit('select', null);
     },
     // Keyboard navigation
@@ -130,7 +132,7 @@ export default {
 
       // i don't know a pretty way of doing this but will find out in the future
       // this will break if we use v-if instead of v-show
-      this.optionsScroller.children[this.highlightedIndex].scrollIntoView({block: 'nearest'});
+      this._scrollListToHighlighted();
     },
     highlightPrev() {
       this.highlight(this.highlightedIndex - 1);
@@ -154,6 +156,49 @@ export default {
       } else {
         false
       }
+    },
+
+    /**
+     * for both initial loading (value watch)
+     * and onClose to check if the user just randomly searching terms
+     * But then cancelled and we reset query val to the current selected option (this.value)
+     *
+     * TODO: this serialization checks fill dirty. enhance
+     */
+    _updateQuery(value){
+      if(!value || (value && value.label === null)){
+        this.query = ""
+      } else {
+        this.query = value.label;
+      }
+    },
+
+    /**
+     * Pleas make this human readable
+     */
+    _setSelectedIndex(){
+      let i = this.filteredOptions
+          .map(o => o.label)
+          .indexOf(this.serializedValue.label);
+      let _i = i < 0 ? 0 : i;
+      this.highlightedIndex = _i;
+      this.selectedIndex = i < 0 ? null : _i;
+    },
+
+    // [noteperf] check if ele is scrollable before trigger
+    _scrollListToHighlighted(){
+      if( this.listboxRef ){
+        let target = this.listboxRef.children[this.highlightedIndex];
+        target && target.scrollIntoView({block: 'nearest'})
+      }
+    },
+    // dangerous
+    _getFakeRefs() {
+      this.inputRef = this.$el.querySelector(`[${ATTRS_NAMESPACE}=input]`);
+      this.listboxRef = this.$el.querySelector(`[${ATTRS_NAMESPACE}=listbox]`);
+      if(!this.listboxRef) {
+        console.warn('For accessibility purposes make sure you v-bind="listboxProps to your role="listbox" element aka the list that scrolls throught he options')
+      }
     }
   },
   created(){
@@ -163,8 +208,11 @@ export default {
       this.selectOption(this.serializedValue);
     }
   },
+  updated(){
+    this.$emit('updated')
+  },
   mounted(){
-    this.optionsScroller = this.$el.querySelector('[data-vue-select-scroller]');
+    this._getFakeRefs();
     document.addEventListener('click', this.handleClickOutside);
   },
   beforeDestroy() {
@@ -175,29 +223,40 @@ export default {
       state: {
         isOpen: this.isOpen,
         highlightedIndex: this.highlightedIndex,
+        selectedIndex: this.selectedIndex
       },
       options: this.filteredOptions,
       optionEvents: (option) => ({
         click: () => {
           this.selectOption(option);
+          this.inputRef.focus();
           this.close();
         }
       }),
       inputProps: {
-        value: this.query
+        value: this.query,
+        // this is kind of hack but, don't know a better way yet
+        [`${ATTRS_NAMESPACE}`]: "input"
       },
       inputEvents: {
         click: this.open,
         input: (e) => this.query = e.target.value,
         keydown: (e) => {
           if(e.key === 'ArrowDown'){
-            this.highlightNext()
+            if(!this.isOpen) {
+              this.open()
+            } else {
+              this.highlightNext()
+            }
           }
           if(e.key === 'ArrowUp') {
             this.highlightPrev()
           }
 
           if(e.key === "Escape" || e.key === "Tab") {
+            // do not close other components that might be listening for the escape key
+            if(this.isOpen) e.stopPropagation();
+
             this.close()
           }
 
@@ -206,15 +265,16 @@ export default {
 
             if( this.isOpen && this.filteredOptions.length){
               this.selectHighlighted();
-            } else {
-              this.open()
             }
           }
         }
       },
       actions: {
         reset: () => this.reset(),
-        toggleOptions: () => this.isOpen ? this.close() : this.open()
+        toggleOptions: () => this.isOpen ? this.close() : (this.open(), this.inputRef.focus())
+      },
+      listboxProps: {
+        [`${ATTRS_NAMESPACE}`]: "listbox"
       }
     })
   }
