@@ -202,6 +202,9 @@ export default {
       } else {
         this.query = value.label;
       }
+      this.$nextTick(() => {
+        this._scrollListToHighlighted('instant');
+      })
     },
 
     /**
