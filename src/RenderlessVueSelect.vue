@@ -117,11 +117,10 @@ export default {
       this.selectOption(this.filteredOptions[this.highlightedIndex]);
       this.close()
     },
-    reset(){
-      this.query = "";
+    reset() {
       this.highlightedIndex = 0;
       this.inputRef.focus();
-      this.$emit('select', null);
+      this.selectOption({ label: '', value: null });
     },
     // Keyboard navigation
     highlight(index){
