@@ -7,7 +7,7 @@
 const ATTRS_NAMESPACE = "data-renderless-vue-select";
 
 export default {
-  name: "renderless-selectbox",
+  name: "renderless-vue-select",
   props: {
     value: {
       type: [String, Object, null],
