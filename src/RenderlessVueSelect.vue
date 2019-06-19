@@ -22,6 +22,14 @@ export default {
           return options.filter(o => o.label.toLowerCase().startsWith(query.toLowerCase()))
         }
       }
+    },
+    /**
+     * Keeping state open after selecting option by click
+     * or keyboard, also after clicking outside the list
+     */
+    keepOpen: {
+      type: Boolean,
+      default: true
     }
   },
   model: {
@@ -30,8 +38,8 @@ export default {
   },
   data(){
     return {
-      query: '',
-      isOpen: false,
+      query: "",
+      isOpen: this.keepOpen ? true : false,
       highlightedIndex: 0,
       selectedIndex: null,
     }
@@ -97,8 +105,9 @@ export default {
       if(!this.isOpen) return;
       // if nothing was select, but some keyboard playing occurred, reset to selected index
       this._updateQuery(this.serializedValue);
-      this._setSelectedIndex();
-      this.isOpen = false;
+      if(!this.keepOpen) {
+        this.isOpen = false
+      }
     },
     selectOption(option){
       this.query = option.label;
