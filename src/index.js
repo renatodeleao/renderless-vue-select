@@ -18,4 +18,5 @@ var Plugin = {
 	}
 }
 
+export { RenderlessVueSelect }
 export default Plugin;
