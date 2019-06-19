@@ -75,8 +75,8 @@ export default {
     }
   },
   watch: {
-    value(newVal){
-      this._updateQuery(newVal);
+    value() {
+      this._updateQuery(this.serializedValue);
       this._setSelectedIndex()
     },
     query(typedValue){
