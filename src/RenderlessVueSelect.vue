@@ -5,6 +5,7 @@
  * [2] - Loading states and async work compatibility out-of-the-boz
  */
 const ATTRS_NAMESPACE = "data-renderless-vue-select";
+const SUPPORTS_SCROLLBEHAVIOR = 'scrollBehavior' in document.documentElement.style
 
 export default {
   name: "renderless-vue-select",
@@ -216,10 +217,13 @@ export default {
     },
 
     // [noteperf] check if ele is scrollable before trigger
-    _scrollListToHighlighted(){
-      if( this.listboxRef ){
+    _scrollListToHighlighted(behavior = 'instant') {
+      if (this.listboxRef) {
         let target = this.listboxRef.children[this.highlightedIndex];
-        target && target.scrollIntoView({block: 'nearest'})
+        target &&
+          SUPPORTS_SCROLLBEHAVIOR
+            ? target.scrollIntoView({ block: "nearest", behavior})
+            : target.scrollIntoView()
       }
     },
     // dangerous
